@@ -1,12 +1,26 @@
-resolver: lts-15.11
+# GHC 9.2.8 (lts-20.26) is the oldest GHC that can build a native arm64 macOS
+# binary without an LLVM toolchain: aarch64-darwin support landed in 8.10.7 but
+# only via the LLVM backend (needs llvm 9-12, no longer packaged), and the
+# native AArch64 code generator arrived in 9.2.
+#
+# lts-15.11 (GHC 8.8.3), the upstream pin, has no aarch64-darwin target at all,
+# which is why every upstream Rome release is x86_64-only.
+resolver: lts-20.26
 
 extra-deps:
-  - amazonka-1.6.1@sha256:d863557379350ed6bbb91187abeb8c349a654f60b140d138710486f58ae7c476,3536
-  - amazonka-core-1.6.1@sha256:9bc59ce403c6eeba3b3eaf3f10e5f0b6a33b6edbbf8f6de0dd6f4c67b86fa698,5135
-  - amazonka-s3-1.6.1@sha256:9d07240fca59ad5197fb614ce3051e701e4951e6d4625a2dab4a9c17a1900194,6317
-  - amazonka-sts-1.6.1@sha256:224759e5e45234064864a66b504c9c300028c50939184f533c004dea351156b1,3190
-  - git: https://github.com/jgm/zip-archive.git
-    commit: c3c9914ac8cb54bf1b2219b54c5af9e3037d6300 # tag "0.4.2"
+  # Patched locally: imports Data.ByteString.Lazy.Builder, removed in
+  # bytestring 0.11 (GHC 9.2.8 ships 0.11.4.0).
+  - vendor/amazonka-1.6.1
+  # Patched locally: amazonka-core 1.6.1 predates aeson 2.0, where Object
+  # changed from `HashMap Text Value` to `KeyMap Value`. Four call sites.
+  # Pinning aeson 1.x instead is not an option -- it uses Data.Semigroup.Option,
+  # removed in base-4.16 (GHC 9.2), and GHC 9.2 is the minimum for native arm64.
+  - vendor/amazonka-core-1.6.1
+  - amazonka-s3-1.6.1
+  - amazonka-sts-1.6.1
+
+# amazonka 1.6.1 (2018) carries upper bounds that predate this snapshot.
+allow-newer: true
 
 flags: {}
 

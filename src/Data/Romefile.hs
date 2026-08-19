@@ -30,6 +30,9 @@ import           Control.Arrow                            ( left )
 import           Control.Lens                      hiding ( (.=) )
 import           Control.Monad.Except
 import           Data.Aeson
+import           Data.Aeson.Key                           ( Key )
+import qualified Data.Aeson.Key                as Key
+import qualified Data.Aeson.KeyMap             as KeyMap
 import           Data.Aeson.Types                         ( typeMismatch )
 import           Data.Carthage.TargetPlatform
 import           Data.Char
@@ -84,8 +87,8 @@ data Framework = Framework { _frameworkName      :: String
 instance ToJSON Framework where
   toJSON (Framework fName fType fPlatforms) = object fields
    where
-    fields    = (T.pack "name" .= fName) : [ T.pack "type" .= fType | fType /= Dynamic ] ++ platforms
-    platforms = [ T.pack "platforms" .= fPlatforms | length (nub fPlatforms) /= 4 ]
+    fields    = ("name" .= fName) : [ "type" .= fType | fType /= Dynamic ] ++ platforms
+    platforms = [ "platforms" .= fPlatforms | length (nub fPlatforms) /= 4 ]
 
 instance FromJSON Framework where
   parseJSON = withObject "Framework" $ \v -> Framework <$> v .: "name" <*> v .:? "type" .!= Dynamic <*> fmap
@@ -112,27 +115,27 @@ data RomefileEntry = RomefileEntry { _projectName :: ProjectName
 
 instance FromJSON RomefileEntry where
   parseJSON o@(Object obj) = do
-    let firstKey = fst <$> (headMay . M.toList $ obj)
+    let firstKey = fst <$> (headMay . KeyMap.toList $ obj)
     case firstKey of
-      Just key -> RomefileEntry <$> parseJSON (Data.Aeson.String key) <*> (obj .: key)
+      Just key -> RomefileEntry <$> parseJSON (Data.Aeson.String (Key.toText key)) <*> (obj .: key)
       Nothing  -> typeMismatch "RomefileEntry" o
   parseJSON invalid = typeMismatch "RomefileEntry" invalid
 
 instance ToJSON RomefileEntry where
-  toJSON (RomefileEntry (ProjectName prjname) fwrks) = object [T.pack prjname .= fwrks]
+  toJSON (RomefileEntry (ProjectName prjname) fwrks) = object [Key.fromString prjname .= fwrks]
 
 
 
-cacheJSONKey :: T.Text
+cacheJSONKey :: Key
 cacheJSONKey = "cache"
 
-repositoryMapJSONKey :: T.Text
+repositoryMapJSONKey :: Key
 repositoryMapJSONKey = "repositoryMap"
 
-ignoreMapJSONKey :: T.Text
+ignoreMapJSONKey :: Key
 ignoreMapJSONKey = "ignoreMap"
 
-currentMapJSONKey :: T.Text
+currentMapJSONKey :: Key
 currentMapJSONKey = "currentMap"
 
 data Romefile = Romefile { _cacheInfo            :: RomeCacheInfo
@@ -189,7 +192,7 @@ instance ToJSON RomeCacheInfo where
   toJSON (RomeCacheInfo b l e) = object fields
    where
     fields =
-      [ T.pack "s3Bucket" .= b | isJust b ] ++ [ T.pack "local" .= l | isJust l ] ++ [ T.pack "engine" .= e | isJust e ]
+      [ "s3Bucket" .= b | isJust b ] ++ [ "local" .= l | isJust l ] ++ [ "engine" .= e | isJust e ]
 
 bucket :: Lens' RomeCacheInfo (Maybe T.Text)
 bucket = lens _bucket (\cInfo n -> cInfo { _bucket = n })
